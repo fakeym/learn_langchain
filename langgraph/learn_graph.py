@@ -19,7 +19,7 @@ from langchain.tools import BaseTool
 from langgraph.prebuilt import ToolNode
 
 os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
-os.environ["OPENAI_API_KEY"] = "sk-7ZOWMhdgnPW1flpLTAbY6yqUybh6mMz3wesyIeFtjliYTTp1"
+os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
 class bingCarAcountInput(BaseModel):
     a: str = Field(..., description="账号名称")
     b: str = Field(..., description="车信息")

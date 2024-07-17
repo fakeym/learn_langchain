@@ -72,19 +72,21 @@ class runGraph(object):
 
     def __init__(self):
         self.system_template = PromptTemplate.from_file("prompt.txt")
-        print(self.system_template)
-
         self.messages = [SystemMessage(content=self.system_template.template)]
         self.llm = ChatOpenAI(temperature=0, model="gpt-4o",
-                              api_key="sk-fVxALjqWNXclhzatHRgPdAiNeRHezeSBb4PcqQ9RPBARMOjW",
+                              api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph",
                               base_url="https://api.fe8.cn/v1")
+        self.human_prompt = PromptTemplate.from_file("human_prompt.txt")
+        print(self.human_prompt)
 
     def call_model(self, state):
         messages = state["human_input"]
         return {"result": messages}
 
     def end_model(self, state):
-        human_content = state["human_input"][-1].content + state["rag_result"] + str(state["query_result"])
+
+        human_content = self.human_prompt.template.format(question=state["human_input"][-1].content, rag_info=state["rag_result"], query_info=state["query_result"])
+        print(human_content)
         self.messages.append(HumanMessage(content=human_content))
         res = self.llm.invoke(self.messages)
         self.messages.append(AIMessage(content=res.content))

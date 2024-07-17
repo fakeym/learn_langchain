@@ -17,7 +17,7 @@ from tqdm import tqdm
 warnings.filterwarnings("ignore", category=Warning)
 
 os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
-os.environ["OPENAI_API_KEY"] = "sk-YCKyqDEHPv6zBCnyciXQegSQbflc1SG2g94icPAzIFuQHCzm"
+os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
 
 
 class ChatDoc(object):
@@ -34,7 +34,7 @@ class ChatDoc(object):
 
         self.split_text = []
         self.model = ChatOpenAI(temperature=0, model="gpt-4o", base_url="https://api.fe8.cn/v1",
-                                api_key="sk-YCKyqDEHPv6zBCnyciXQegSQbflc1SG2g94icPAzIFuQHCzm")
+                                api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph")
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
         self.mysql_client = pymysql.connect(host="127.0.0.1", port=3306, user="root", password="hhjy2024@Zl.",
                                             database="test_ai", charset="utf8")
@@ -79,7 +79,7 @@ class ChatDoc(object):
 
     def emb_text(self, text):
         embedding = OpenAIEmbeddings(model="text-embedding-3-small", base_url="https://api.fe8.cn/v1",
-                                     api_key="sk-YCKyqDEHPv6zBCnyciXQegSQbflc1SG2g94icPAzIFuQHCzm")
+                                     api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph")
         embedding_dim = embedding.embed_query(text)
         return embedding_dim
 
@@ -111,7 +111,7 @@ class ChatDoc(object):
             info_result += res["entity"]["text"]
         print("调用rag方法")
         # print(info_result)
-        return "可乐5元一瓶"
+        return info_result
 
     def chat_with_doc(self, question):
         contexts = self.ask_and_find(question)

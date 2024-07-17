@@ -1,0 +1,6 @@
+问题：
+{question}
+
+内容：
+{query_info}
+{rag_info}
