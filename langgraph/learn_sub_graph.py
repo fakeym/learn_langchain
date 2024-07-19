@@ -84,9 +84,7 @@ class runGraph(object):
         return {"result": messages}
 
     def end_model(self, state):
-
         human_content = self.human_prompt.template.format(question=state["human_input"][-1].content, rag_info=state["rag_result"], query_info=state["query_result"])
-        print(human_content)
         self.messages.append(HumanMessage(content=human_content))
         res = self.llm.invoke(self.messages)
         self.messages.append(AIMessage(content=res.content))
