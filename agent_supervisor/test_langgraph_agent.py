@@ -54,9 +54,6 @@ class searchAround(BaseTool):
             }
             print("异步调用获取地点周边的方法")
             async with session.get(url=around_url, params=params) as response:
-                # prompt = "请帮我整理以下内容中的名称，地址和距离，并按照地址与名称对应输出，且告诉距离多少米，内容:{}".format(
-                #     await response.json())
-                # result = llm.invoke(prompt)
                 return await response.json()
 
 
@@ -192,9 +189,13 @@ graph = work_flow.compile()
 
 
 
-res = graph.invoke({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]})
-print(res)
-
-res = asyncio.run(graph.ainvoke({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]}))
+res = graph.stream({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]})
 for i in res:
     print(i)
+
+
+# res = graph.invoke({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]})
+# print(res)
+
+# res = asyncio.run(graph.ainvoke({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]}))
+
