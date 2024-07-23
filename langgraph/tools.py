@@ -68,7 +68,6 @@ class createAccount(BaseTool):
         print("异步调用了这个生成账号的方法")
         return a
 
-
 class createOrderInput(BaseModel):
     """create account tool"""
     a: str = Field(..., description="账号名称")

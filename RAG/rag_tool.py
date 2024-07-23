@@ -112,6 +112,6 @@ class ragTool(object):
         self.messages.append(HumanMessage(content=f"问题:{question},检索内容:{result}"))
         res = self.llm.invoke(self.messages)
         self.messages.append(AIMessage(content=res.content))
-        return res
+        return res.content
 
 

@@ -13,11 +13,12 @@ from langchain_openai.chat_models import ChatOpenAI
 from langchain_text_splitters import RecursiveJsonSplitter
 from pymilvus import MilvusClient
 from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv("/Users/zhulang/work/llm/RAG/.env")
 
 warnings.filterwarnings("ignore", category=Warning)
 
-os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
-os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
 
 
 class ChatDoc(object):
@@ -33,8 +34,7 @@ class ChatDoc(object):
         }
 
         self.split_text = []
-        self.model = ChatOpenAI(temperature=0, model="gpt-4o", base_url="https://api.fe8.cn/v1",
-                                api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph")
+        self.model = ChatOpenAI(temperature=0, model="gpt-4o")
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
         self.mysql_client = pymysql.connect(host="127.0.0.1", port=3306, user="root", password="hhjy2024@Zl.",
                                             database="test_ai", charset="utf8")
@@ -78,8 +78,7 @@ class ChatDoc(object):
             self.split_text = split_text
 
     def emb_text(self, text):
-        embedding = OpenAIEmbeddings(model="text-embedding-3-small", base_url="https://api.fe8.cn/v1",
-                                     api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph")
+        embedding = OpenAIEmbeddings(model="text-embedding-3-small")
         embedding_dim = embedding.embed_query(text)
         return embedding_dim
 
