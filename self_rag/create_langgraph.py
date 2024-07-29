@@ -1,9 +1,14 @@
-import time
-from typing import List, TypedDict
+from typing import List, TypedDict, Type, Any, Annotated
 
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AnyMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.tools import BaseTool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_openai_tools_agent,AgentExecutor
 from langgraph.constants import END
-from langgraph.graph import StateGraph
-
+from langgraph.graph import StateGraph,MessagesState
+from pydantic.v1 import BaseModel, Field
+import concurrent.futures
 from self_rag_tool import GradeAndGenerateTool
 
 
@@ -38,6 +43,7 @@ def grade_documents(state):
             result_documents.append(info)
         else:
             continue
+    print(result_documents)
     return {"question": question, "documents": result_documents}
 
 
@@ -50,7 +56,7 @@ def generate_llm(state):
 
 
 def hallucinations_generate(state):
-    print("开始调用幻觉判断方法")
+    print("调用幻觉判断的方法")
     question = state["question"]
     generation = state["generation"]
     documents = state["documents"]
@@ -59,7 +65,6 @@ def hallucinations_generate(state):
     if result == "yes":
         return "generate_llm"
     else:
-        print("判断问题和回复是否相关")
         generation = tools.answer_question(question=question, answer=generation)
         if generation == "yes":
             return "useful"
@@ -90,34 +95,76 @@ workflow.add_edge("rewrite_question", "retrieve")
 
 graph = workflow.compile()
 
+class graphInput(BaseModel):
+    question: str = Field(..., description="问题")
 
-start_time = time.time()
-res = graph.stream({"question": "你们有什么菜品"})
-for i in res:
-    print(i)
+class runGraph(BaseTool):
 
-print(time.time() - start_time)
-
+    args_schema: Type[BaseModel] = graphInput
+    description = "你是一个营地信息获取的工具，能够获取到关于营地房型，酒水，餐饮套餐，地址，四季活动，当地特产，联系方式等信息。并且通过用户的问题来进行对应的信息检索，得到最终的回复"
+    name = "runGraph"
 
 
-state1 = {"question":"你们有什么菜品"}
-state2 = {
-        "documents": "向量检索结果",
-        "question": "你们有什么菜品",
-    }
-state3 = {
-        "documents": "只有与问题相关的向量检索结果",
-        "question": "你们有什么菜品",
-    }
+    def _run(self, question):
+        result = tools.search_vector(question)
+        documents_end = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(tools.grade, question, text["entity"]["text"], result[0].index(text)) for text in
+                       result[0]}
+            for future in concurrent.futures.as_completed(futures):
+                if future.result()[0] == "yes":
+                    documents_end.append(result[0][future.result()[1]]["entity"]["text"])
+        end_text = "\n".join(documents_end).replace("}", "").replace("{", "")
+        result = tools.generate(question, end_text)
+        return result
 
-state4 = {
-        "documents": "只有与问题相关的向量检索结果",
-        "question": "你们有什么菜品",
-        "generation": "回复的结果",
-    }
-state5 = {
-        "documents": "只有与问题相关的向量检索结果",
-        "question": "重新复写的更加适合向量检索的问题",
-        "generation": "回复的结果",
-    }
 
+    async def _arun(self, question):
+        result = tools.search_vector(question)
+        documents_end = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(tools.grade, question, text["entity"]["text"], result[0].index(text)) for text in
+                       result[0]}
+            for future in concurrent.futures.as_completed(futures):
+                if future.result()[0] == "yes":
+                    documents_end.append(result[0][future.result()[1]]["entity"]["text"])
+        end_text = "\n".join(documents_end).replace("}", "").replace("{", "")
+        result = tools.generate(question, end_text)
+        return result
+
+
+llm = ChatOpenAI(temperature=0, model="gpt-4o")
+class llmInvokeInput(BaseModel):
+
+    messages: list[AnyMessage] = Field(description="历史对话的内容")
+
+
+class llmInvoke(BaseTool):
+    args_schema: Type[BaseModel] = llmInvokeInput
+    description = "这是一个可以基于历史对话的内容用来回答用户问题。"
+    name = "llmInvoke"
+
+
+    def _run(self, messages):
+        res = llm.invoke(messages)
+        return res.content
+
+
+
+
+
+
+system_prompt = ChatPromptTemplate.from_messages([
+    ("system","你是一位营地智能客服，当用户询问关于营地的问题时，你能够使用对应的runGraph工具进行回答。并且你可以根据用户的问题来判定是否需要调用runGraph工具。"),
+    MessagesPlaceholder(variable_name="messages"),
+    MessagesPlaceholder(variable_name="agent_scratchpad"),
+])
+agent = create_openai_tools_agent(llm=llm, tools=[runGraph(), llmInvoke()],prompt=system_prompt)
+agents = AgentExecutor(agent=agent, tools=[runGraph(),llmInvoke()])
+messages = []
+while True:
+    question = input("请输入问题：")
+    messages.append(HumanMessage(content=question))
+    res = agents.invoke({"messages":messages})
+    messages.append(AIMessage(content=res["output"]))
+    print(res["output"])

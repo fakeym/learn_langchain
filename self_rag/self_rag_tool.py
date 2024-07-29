@@ -35,7 +35,8 @@ class GradeAnswer(BaseModel):
 class GradeAndGenerateTool(object):
 
     def __init__(self):
-        self.llm = ChatOpenAI(temperature=0.5, model="gpt-4o")
+        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        # self.llm = ChatOpenAI(temperature=0, model="qwen2-14b",api_key="empty",base_url = "http://61.136.221.118:15001/v1")
         self.struct_llm_grader = self.llm.with_structured_output(GradedRagTool)
         self.struct_llm_hallucinations = self.llm.with_structured_output(GradeHallucinations)
         self.struct_llm_answer = self.llm.with_structured_output(GradeAnswer)
@@ -45,14 +46,14 @@ class GradeAndGenerateTool(object):
                                              consistency_level="Strong")
 
     # 评分
-    def grade(self, question, text):
+    def grade(self, question, text,idx):
         system_prompt = """
                 你是一名评估检索到到文档与用户到问题相关性到评分员，不需要一个严格的测试，目标是过滤掉错误的检索。如果文档包含与用户问题相关的关键字或者语义，请评为相关，否则请评为不相关。你的回答只能是yes或者no
                 """
         grade_messages = [SystemMessage(content=system_prompt)]
         grade_messages.append(HumanMessage(content=f"问题：{question}\n文档：{text}"))
         result = self.struct_llm_grader.invoke(grade_messages)
-        return result.binary_score
+        return result.binary_score,idx
 
     # 生成答案
     def generate(self, question, text):
@@ -98,9 +99,7 @@ class GradeAndGenerateTool(object):
         return result
 
 
-if __name__ == '__main__':
-    tools = GradeAndGenerateTool()
-    question = "你们的地址在哪里"
-    print(tools.search_vector(question)[0])
+
+
 
 
