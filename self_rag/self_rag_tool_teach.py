@@ -6,6 +6,7 @@ from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from dotenv import load_dotenv
 
 
+
 _ = load_dotenv()
 
 
@@ -89,6 +90,9 @@ class gradeAndGenerateRagTool(object):
         rewrite_messages.append(HumanMessage(content=f"问题：{question}"))
         result = self.llm.invoke(rewrite_messages)
         return result.content
+
+
+
 
 
 

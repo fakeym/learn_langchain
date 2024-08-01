@@ -116,5 +116,7 @@ class ChatDoc(object):
 
 if __name__ == '__main__':
     chatdoc = ChatDoc()
-    res = chatdoc.chat_with_doc("小米SU7的续航怎么样")
+    # chatdoc.split_text("test.docx")
+    # chatdoc.vector_storage()
+    res = chatdoc.chat_with_doc("该影片在北美的多少家影院试映 ")
     print(res)

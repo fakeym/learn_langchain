@@ -12,8 +12,8 @@ from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
-from langgraph.constants import END
-from langgraph.graph import StateGraph
+from learn_langgraph.constants import END
+from learn_langgraph.graph import StateGraph
 from pydantic.v1 import BaseModel, Field
 
 os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"

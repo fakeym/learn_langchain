@@ -169,7 +169,7 @@ from typing import Sequence, TypedDict, Annotated
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from langgraph.graph import END, StateGraph, START
+from learn_langgraph.graph import END, StateGraph, START
 
 
 # The agent state is the input to each node in the graph

@@ -2,7 +2,7 @@ import json
 import os
 import warnings
 
-import pymysql
+# import pymysql
 from langchain.prompts import ChatPromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.document_loaders import Docx2txtLoader, PyPDFLoader, UnstructuredMarkdownLoader, CSVLoader
@@ -15,7 +15,7 @@ from pymilvus import MilvusClient
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-load_dotenv("/Users/zhulang/work/llm/RAG/.env")
+_ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
 
 warnings.filterwarnings("ignore", category=Warning)
 
@@ -36,9 +36,9 @@ class ChatDoc(object):
         self.split_text = []
         self.model = ChatOpenAI(temperature=0, model="gpt-4o")
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
-        self.mysql_client = pymysql.connect(host="127.0.0.1", port=3306, user="root", password="hhjy2024@Zl.",
-                                            database="test_ai", charset="utf8")
-        self.cur = self.mysql_client.cursor()
+        # self.mysql_client = pymysql.connect(host="127.0.0.1", port=3306, user="root", password="hhjy2024@Zl.",
+        #                                     database="test_ai", charset="utf8")
+        # self.cur = self.mysql_client.cursor()
 
     def handle_json(self, filename):
         with open(filename, "r", encoding="utf-8") as f:
@@ -122,29 +122,29 @@ class ChatDoc(object):
             content += i.content
         return content
 
-    def query_data(self, query):
-        messages = [SystemMessage(content="""你是一位mysql数据的查询工作者，你熟悉mysql的各种表的数据查询语法。现在有一张表的结构是：
-                CREATE TABLE `camp_package` (
-                  `id` int NOT NULL AUTO_INCREMENT COMMENT '营地产品id',
-                  `product_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '营地的房型名称',
-                  `person_num` int NOT NULL COMMENT '允许入住的最多人数',
-                  `product_area` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '产品面积 单位是平方米',
-                  `product_position` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '产品位置',
-                  `daily_price` decimal(10,2) NOT NULL COMMENT '日常价格 单位是元',
-                  `weekend_price` decimal(10,2) NOT NULL COMMENT '周末价格 单位是元',
-                  `festival_price` decimal(10,2) NOT NULL COMMENT '节日价格  单位是元',
-                  `bottom_price` decimal(10,2) NOT NULL COMMENT '最低价格  单位是元',
-                  PRIMARY KEY (`id`)
-                ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                你需要根据表的结构生成对应的sql语句给到用户，只需要输出纯sql语句，不需要其他任何的前缀或后缀，不需要换行输出，并且把对应产品的详情查询出来。
-                """)]
-        messages.append(HumanMessage(content=f"{query}"))
-        res = self.model.invoke(messages)
-        sql = res.content.replace("sql", "").strip()
-        try:
-            self.cur.execute(f"{sql}")
-            data = self.cur.fetchall()
-        except:
-            data = "未查询到结果或查询结果为空时,请使用RAG的方式再次查询"
-        print("调用query方法")
-        return data
+    # def query_data(self, query):
+    #     messages = [SystemMessage(content="""你是一位mysql数据的查询工作者，你熟悉mysql的各种表的数据查询语法。现在有一张表的结构是：
+    #             CREATE TABLE `camp_package` (
+    #               `id` int NOT NULL AUTO_INCREMENT COMMENT '营地产品id',
+    #               `product_name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '营地的房型名称',
+    #               `person_num` int NOT NULL COMMENT '允许入住的最多人数',
+    #               `product_area` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '产品面积 单位是平方米',
+    #               `product_position` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '产品位置',
+    #               `daily_price` decimal(10,2) NOT NULL COMMENT '日常价格 单位是元',
+    #               `weekend_price` decimal(10,2) NOT NULL COMMENT '周末价格 单位是元',
+    #               `festival_price` decimal(10,2) NOT NULL COMMENT '节日价格  单位是元',
+    #               `bottom_price` decimal(10,2) NOT NULL COMMENT '最低价格  单位是元',
+    #               PRIMARY KEY (`id`)
+    #             ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    #             你需要根据表的结构生成对应的sql语句给到用户，只需要输出纯sql语句，不需要其他任何的前缀或后缀，不需要换行输出，并且把对应产品的详情查询出来。
+    #             """)]
+    #     messages.append(HumanMessage(content=f"{query}"))
+    #     res = self.model.invoke(messages)
+    #     sql = res.content.replace("sql", "").strip()
+    #     try:
+    #         self.cur.execute(f"{sql}")
+    #         data = self.cur.fetchall()
+    #     except:
+    #         data = "未查询到结果或查询结果为空时,请使用RAG的方式再次查询"
+    #     print("调用query方法")
+    #     return data

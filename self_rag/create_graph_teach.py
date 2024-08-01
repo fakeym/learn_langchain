@@ -3,9 +3,10 @@ from typing import TypedDict, List
 from langgraph.constants import END
 from langgraph.graph import StateGraph
 
-from llm.self_rag.self_rag_tool_teach import gradeAndGenerateRagTool
+# from self_rag.self_rag_tool_teach import gradeAndGenerateRagTool
 import concurrent.futures
 
+from llm.self_rag.self_rag_tool_teach import gradeAndGenerateRagTool
 
 class CreateLanggraphState(TypedDict):
     question : str
@@ -14,11 +15,14 @@ class CreateLanggraphState(TypedDict):
 
 
 
+
 tools = gradeAndGenerateRagTool()
+
 
 
 def retrieve(state):
     question = state["question"]
+    print(state)
     documents = tools.search_vector(question)
     result_documents = []
     for document in documents[0]:
@@ -78,31 +82,24 @@ def hallucinations_generate(state):
 
 
 
-workflow = StateGraph(CreateLanggraphState)
+class createGraph(object):
+    def create_graph(self):
+            workflow = StateGraph(CreateLanggraphState)
+            workflow.add_node("retrieve",retrieve)
+            workflow.add_node("grade_documents",grade_documents)
+            workflow.add_node("generation",generation)
+            workflow.add_node("rewrite_question",rewrite_question)
+
+            workflow.set_entry_point("retrieve")
+            workflow.add_edge("retrieve","grade_documents")
+            workflow.add_conditional_edges("grade_documents",grade_generation,{"generation":"generation","rewrite_question":"rewrite_question"})
+            workflow.add_conditional_edges("generation",hallucinations_generate,{"generation":"generation","rewrite_question":"rewrite_question","useful":END})
+            workflow.add_edge("rewrite_question","retrieve")
+
+            graph = workflow.compile()
+            return graph
 
 
-workflow.add_node("retrieve",retrieve)
-workflow.add_node("grade_documents",grade_documents)
-workflow.add_node("generation",generation)
-workflow.add_node("rewrite_question",rewrite_question)
-
-
-
-workflow.set_entry_point("retrieve")
-workflow.add_edge("retrieve","grade_documents")
-workflow.add_conditional_edges("grade_documents",grade_generation,{"generation":"generation","rewrite_question":"rewrite_question"})
-workflow.add_conditional_edges("generation",hallucinations_generate,{"generation":"generation","rewrite_question":"rewrite_question","useful":END})
-workflow.add_edge("rewrite_question","retrieve")
-
-graph = workflow.compile()
-
-
-
-
-if __name__ == '__main__':
-    question = "你们的地址在哪里"
-    result = graph.invoke({"question":question})
-    print(result)
 
 
 

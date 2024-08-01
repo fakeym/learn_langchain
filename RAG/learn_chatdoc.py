@@ -1,6 +1,8 @@
 import os
 import time
 import warnings
+
+from langchain_community.vectorstores import Chroma
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from langchain.prompts import ChatPromptTemplate
@@ -11,13 +13,12 @@ from langchain_openai.chat_models import ChatOpenAI
 from pymilvus import MilvusClient
 from tqdm import tqdm
 
-from config import OPENAI_BASE_URL
+
+
+
 
 warnings.filterwarnings("ignore", category=Warning)
 
-# os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
-os.environ["OPENAI_API_BASE"] = OPENAI_BASE_URL
-os.environ["OPENAI_API_KEY"] = "sk-ucOibt6QEWOo3zM4YFNfeUv9eyApPysO2ZFgMEtE3K252pxt"
 
 
 # os.environ["OPENAI_BASE_URL"] = "http://ip:port/v1"
@@ -105,7 +106,7 @@ class ChatDoc(object):
 
 
 if __name__ == '__main__':
-    chat_doc = ChatDoc("test.docx")
+    chat_doc = ChatDoc("teach_rag.docx")
     chat_doc.split_sentences()
     chat_doc.vector_storage()
     while True:

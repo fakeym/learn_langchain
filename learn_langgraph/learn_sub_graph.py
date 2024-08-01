@@ -5,8 +5,8 @@ from typing import TypedDict, List, Dict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
-from langgraph.constants import END
-from langgraph.graph import StateGraph
+from learn_langgraph.constants import END
+from learn_langgraph.graph import StateGraph
 
 from rag_tool_graph import ChatDoc
 

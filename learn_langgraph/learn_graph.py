@@ -1,5 +1,5 @@
 """
-langgraph
+learn_langgraph
 
 点： 工具，model
 线： 条件线，普通线   主要使用点（工具的指向）进行连接组成线
@@ -7,19 +7,21 @@ langgraph
 图：整个点线组成的 叫图。
 
 """
-
 import os
 from typing import Type
+
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint import MemorySaver
 from langgraph.graph import END, StateGraph, MessagesState
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool
 from langgraph.prebuilt import ToolNode
 
-os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
-os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
+
+
+
+# os.environ["OPENAI_API_BASE"] = "https://api.fe8.cn/v1"
+# os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
 class bingCarAcountInput(BaseModel):
     a: str = Field(..., description="账号名称")
     b: str = Field(..., description="车信息")
@@ -63,8 +65,11 @@ class createCar(BaseTool):
 tools = [createCar(),bingCarAcount()]
 tool_node = ToolNode(tools)
 
-model = ChatOpenAI(temperature=0,model="gpt-4o",api_key="sk-fVxALjqWNXclhzatHRgPdAiNeRHezeSBb4PcqQ9RPBARMOjW",
-                         base_url="https://api.fe8.cn/v1").bind_tools(tools)
+model = ChatOpenAI(temperature=0,model="yi-large-fc",openai_api_key="477030cf46cb452a8daaecd2596345f2",
+                         openai_api_base="https://api.lingyiwanwu.com/v1")
+
+llm = model.bind_tools(tools)
+
 
 def call_model(state: MessagesState) -> MessagesState:
     """
@@ -73,7 +78,7 @@ def call_model(state: MessagesState) -> MessagesState:
     :return:
     """
     messages = state["messages"]
-    response = model.invoke(messages)
+    response = llm.invoke(messages)
     return {"messages" : [response]}
 
 
@@ -115,7 +120,6 @@ while True:
     res = app.invoke({"messages":messages},config={"configurable":{"tread_id":1}})
     messages.append(AIMessage(content=res["messages"][-1].content))
     print(res["messages"][-1].content)
-
 
 
 
