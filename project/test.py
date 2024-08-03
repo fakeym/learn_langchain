@@ -90,7 +90,23 @@ class ChatDoc(object):
         return "向量存储成功"
 
 
+    def ask_and_find(self, question):
+        search_result = self.milvus_client.search(collection_name=self.collection_name, data=[self.emb_text(question)], limit=3,
+                                                  params={"metric_type": "IP"}, output_fields=["text"])
 
+        content = ""
+        for info in search_result[0]:
+            content += info["entity"]["text"]
+        return content
+
+
+    def chat_with_doc(self, question):
+        content = self.ask_and_find(question)
+        res = self.llm.stream([HumanMessage(content=f"问题：{question},内容：{content}")])
+        context = ""
+        for i in res:
+            context += i.content
+        return context
 
 
 
