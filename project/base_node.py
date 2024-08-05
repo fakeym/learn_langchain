@@ -13,6 +13,7 @@ vector_tool = VectorStorageObject()
 def get_knowledge_type(state):
     question = state["question"]
     filename = state["filename"]
+    print(state)
     llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo").with_structured_output(RouteQuery)
     res = llm.invoke(question)
     return {"question": question, "collection_name": res.route,"filename":filename}

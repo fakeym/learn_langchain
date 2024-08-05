@@ -12,8 +12,7 @@ _ = load_dotenv()
 class GradeAndGenerateTool(object):
 
     def __init__(self):
-        self.llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
-        self.llm_4o = ChatOpenAI(temperature=0, model="gpt-4o")
+        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
         self.struct_llm_grader = self.llm.with_structured_output(GradedRagTool)
         self.struct_llm_hallucinations = self.llm.with_structured_output(GradeHallucinations)
         self.struct_llm_answer = self.llm.with_structured_output(GradeAnswer)
@@ -35,11 +34,11 @@ class GradeAndGenerateTool(object):
         grade_human_prompt = f"""您是问答任务的助理。使用以下检索到的上下文来回答问题。如果你不知道答案，就说你不知道。最多使用三句话，保持答案简洁。\n问题：{question}\n上下文：{text}\n答案："""
         human_prompt = ChatPromptTemplate.from_template(grade_human_prompt)
         grade_human_prompt_end = human_prompt.format_messages(question=question, text=text)
-        result  = self.llm_4o.invoke(grade_human_prompt_end)
-        # content = ''
-        # for i in result:
-        #     content += i.content
-        return result.content
+        result  = self.llm.stream(grade_human_prompt_end)
+        content = ''
+        for i in result:
+            content += i.content
+        return content
 
     # 判断是否有幻觉
     def hallucinations(self, documents, answer):
@@ -48,6 +47,7 @@ class GradeAndGenerateTool(object):
         hallucinations_messages.append(HumanMessage(content=f"：回答:{answer}\n文档：{documents}"))
         result = self.struct_llm_hallucinations.invoke(hallucinations_messages)
         return result.binary_score
+
 
     # 判断答案是否和问题相关
     def answer_question(self, question, answer):
@@ -73,8 +73,6 @@ class GradeAndGenerateTool(object):
     # 检索
     def search_vector(self, question, collection_name):
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
-        # self.milvus_client.create_collection(collection_name=collection_name, dimension=1536, metric_type="IP",
-        #                                      consistency_level="Strong")
         result = self.milvus_client.search(collection_name=collection_name, data=[self.embed_dim(question)],
                                            output_fields=["text"])
         self.milvus_client.close()

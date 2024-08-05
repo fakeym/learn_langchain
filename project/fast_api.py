@@ -2,6 +2,7 @@ from fastapi import FastAPI, File, UploadFile,Query
 
 from pydantic import BaseModel, Field
 
+from llm.project.base_tool import ChatDoc
 from llm.project.create_graph_teach import createGraph
 
 graph = createGraph()
@@ -28,6 +29,18 @@ async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
 
     res = graph_run.invoke(data)
     return res["answer"]
+
+
+@app.post("/vector")
+async def vector(file:UploadFile=File(None)):
+    contents = await file.read()
+    file_name = file.filename
+    with open(file_name, "wb") as f:
+        f.write(contents)
+    insert_vector = ChatDoc()
+    insert_vector.split_text(filename=file_name)
+    result = insert_vector.vector_storage(filename=file_name)
+    return result
 
 
 

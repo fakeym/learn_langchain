@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredMarkdownLoader, CSVLoader
 from langchain_core.documents import Document
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter, RecursiveJsonSplitter
 from pymilvus import MilvusClient
@@ -17,7 +18,7 @@ _ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
 # 灌库
 class ChatDoc(object):
 
-    def __init__(self, collection_name):
+    def __init__(self):
         self.loader = {
             ".pdf": PyPDFLoader,
             ".txt": Docx2txtLoader,
@@ -26,16 +27,28 @@ class ChatDoc(object):
             ".csv": CSVLoader,
             ".json": self.handle_json,
         }
-        self.collection_name = collection_name
+
 
         self.txt_splitter = CharacterTextSplitter(chunk_size=240, chunk_overlap=30, length_function=len,
                                                   add_start_index=True)
         self.json_splitter = RecursiveJsonSplitter(max_chunk_size=240)
         self.embeding = OpenAIEmbeddings(model="text-embedding-3-small")
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
-        self.milvus_client.create_collection(collection_name=self.collection_name, dimension=1536, metric_type="IP",
-                                             consistency_level="Strong")
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
+
+        self.llm = ChatOpenAI(temperature=0, model="qwen2-14b",base_url="http://61.136.221.118:15001/v1")
+        self.struct_llm = self.llm.with_structured_output(RouteQuery)
+
+
+    def get_knowledge_type(self, filename):
+        system_prompt = """
+                                你是一名知识分类专家，主要分别判断以下类别的知识，有且仅有空调，电视机，冰箱这三类知识。识别准确后，返回给用户。返回的映射关系为：电视：TV，冰箱：refrigerator，空调：air_conditioning
+                                """
+        grade_messages = [SystemMessage(content=system_prompt)]
+        data = self.get_file(filename)[0].page_content
+        grade_messages.append(HumanMessage(content=f"{data}"))
+        collection_name = self.struct_llm.invoke(grade_messages)
+
+        return collection_name.route
 
     def get_file(self, filename):
         file_extension = os.path.splitext(filename)[-1]
@@ -78,14 +91,22 @@ class ChatDoc(object):
     def emb_text(self, text):
         return self.embeding.embed_query(text)
 
-    def vector_storage(self):
+    def vector_storage(self,filename):
+        data_name = self.get_knowledge_type(filename)
         data = []
         for idx, text in enumerate(tqdm(self.end_splitter, desc="向量化")):
             if isinstance(text, Document):
                 text = text.page_content
             data.append({"id": idx, "vector": self.emb_text(text), "text": text})
 
-        self.milvus_client.insert(collection_name=self.collection_name, data=data)
+        self.milvus_client.create_collection(
+            collection_name=data_name,
+            dimension=1536,
+            metric_type="IP",  # Inner product distance
+            consistency_level="Strong",  # Strong consistency level
+        )
+
+        self.milvus_client.insert(collection_name=data_name, data=data)
         return "向量存储成功"
 
 
@@ -100,14 +121,5 @@ class determine_type(object):
         loader = Docx2txtLoader(filename).load()
         content = loader[0].page_content
         res = self.struct_llm.invoke(content)
-        vector_storage_tool = ChatDoc(res.route)
-        vector_storage_tool.split_text(filename)
-        result = vector_storage_tool.vector_storage()
-        return result
+        return res
 
-    def search_tool(self, question):
-        res = self.struct_llm.invoke(question)
-        print(res.route)
-        search_tool = ChatDoc(res.route)
-        result = search_tool.chat_with_doc(question)
-        print(result)
