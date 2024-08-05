@@ -1,23 +1,23 @@
 import json
 import os
 
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredMarkdownLoader, CSVLoader
 from langchain_core.documents import Document
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter, RecursiveJsonSplitter
 from pymilvus import MilvusClient
 from tqdm import tqdm
 
 from llm.project.base_model import RouteQuery
-from dotenv import load_dotenv
 
 _ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
-#灌库
+
+
+# 灌库
 class ChatDoc(object):
 
-    def __init__(self,collection_name):
+    def __init__(self, collection_name):
         self.loader = {
             ".pdf": PyPDFLoader,
             ".txt": Docx2txtLoader,
@@ -85,14 +85,8 @@ class ChatDoc(object):
                 text = text.page_content
             data.append({"id": idx, "vector": self.emb_text(text), "text": text})
 
-
         self.milvus_client.insert(collection_name=self.collection_name, data=data)
         return "向量存储成功"
-
-
-
-
-
 
 
 # 判断文件知识的类型
@@ -101,31 +95,19 @@ class determine_type(object):
         self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
         self.struct_llm = self.llm.with_structured_output(RouteQuery)
 
-
     # 这个是判断知识应该保存在哪个向量数据库中的那张表
     def vector_tool(self, filename):
         loader = Docx2txtLoader(filename).load()
         content = loader[0].page_content
         res = self.struct_llm.invoke(content)
-        vector_storage_tool= ChatDoc(res.route)
+        vector_storage_tool = ChatDoc(res.route)
         vector_storage_tool.split_text(filename)
         result = vector_storage_tool.vector_storage()
         return result
 
-
-    def search_tool(self,question):
+    def search_tool(self, question):
         res = self.struct_llm.invoke(question)
         print(res.route)
         search_tool = ChatDoc(res.route)
         result = search_tool.chat_with_doc(question)
         print(result)
-
-
-
-if __name__ == '__main__':
-    type = determine_type()
-    type.search_tool("如果夏天比较热，你建议开到多少度合适")
-
-
-
-

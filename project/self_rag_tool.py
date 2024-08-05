@@ -1,66 +1,44 @@
 from dotenv import load_dotenv
 from langchain.prompts import ChatPromptTemplate
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from pydantic.v1 import BaseModel, Field
 from pymilvus import MilvusClient
 
+from llm.project.base_model import GradedRagTool, GradeHallucinations, GradeAnswer
+
 _ = load_dotenv()
-
-
-class GradedRagTool(BaseModel):
-    """
-    对检索到到文档进行相关性的检查，相关返回yes，不相关返回no
-    """
-
-    binary_score: str = Field(description="文档与问题的相关性，'yes' or 'no'")
-
-
-class GradeHallucinations(BaseModel):
-    """
-    对最终对回答进行一个判断，判断回答中是否存在幻觉，存在则输出yes，不存在这输出no
-    """
-
-    binary_score: str = Field(description="问题与回答的相关性，'yes' or 'no'")
-
-
-class GradeAnswer(BaseModel):
-    """对最终的回答于问题进行比对，判断回答和问题是相关的，是相关的则输出yes，不相关则输出no"""
-
-    binary_score: str = Field(
-        description="问题与回答的相关性， 'yes' or 'no'"
-    )
 
 
 class GradeAndGenerateTool(object):
 
     def __init__(self):
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
-        # self.llm = ChatOpenAI(temperature=0, model="qwen2-14b",api_key="empty",base_url = "http://61.136.221.118:15001/v1")
+        self.llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
+        self.llm_4o = ChatOpenAI(temperature=0, model="gpt-4o")
         self.struct_llm_grader = self.llm.with_structured_output(GradedRagTool)
         self.struct_llm_hallucinations = self.llm.with_structured_output(GradeHallucinations)
         self.struct_llm_answer = self.llm.with_structured_output(GradeAnswer)
         self.embeding = OpenAIEmbeddings(model="text-embedding-3-small")
-        self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
-        self.milvus_client.create_collection(collection_name="rag", dimension=1536, metric_type="IP",
-                                             consistency_level="Strong")
+
 
     # 评分
-    def grade(self, question, text,idx):
+    def grade(self, question, text, idx):
         system_prompt = """
                 你是一名评估检索到到文档与用户到问题相关性到评分员，不需要一个严格的测试，目标是过滤掉错误的检索。如果文档包含与用户问题相关的关键字或者语义，请评为相关，否则请评为不相关。你的回答只能是yes或者no
                 """
         grade_messages = [SystemMessage(content=system_prompt)]
         grade_messages.append(HumanMessage(content=f"问题：{question}\n文档：{text}"))
         result = self.struct_llm_grader.invoke(grade_messages)
-        return result.binary_score,idx
+        return result.binary_score, idx
 
     # 生成答案
     def generate(self, question, text):
         grade_human_prompt = f"""您是问答任务的助理。使用以下检索到的上下文来回答问题。如果你不知道答案，就说你不知道。最多使用三句话，保持答案简洁。\n问题：{question}\n上下文：{text}\n答案："""
         human_prompt = ChatPromptTemplate.from_template(grade_human_prompt)
         grade_human_prompt_end = human_prompt.format_messages(question=question, text=text)
-        result = self.llm.invoke(grade_human_prompt_end)
+        result  = self.llm_4o.invoke(grade_human_prompt_end)
+        # content = ''
+        # for i in result:
+        #     content += i.content
         return result.content
 
     # 判断是否有幻觉
@@ -93,13 +71,11 @@ class GradeAndGenerateTool(object):
         return self.embeding.embed_query(text)
 
     # 检索
-    def search_vector(self, question,collection_name):
+    def search_vector(self, question, collection_name):
+        self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
+        # self.milvus_client.create_collection(collection_name=collection_name, dimension=1536, metric_type="IP",
+        #                                      consistency_level="Strong")
         result = self.milvus_client.search(collection_name=collection_name, data=[self.embed_dim(question)],
                                            output_fields=["text"])
+        self.milvus_client.close()
         return result
-
-
-
-
-
-
