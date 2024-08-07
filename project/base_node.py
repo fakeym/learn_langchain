@@ -113,10 +113,12 @@ def vector_storage(state):
 
 
 def end_answer(state):
-    return {"answer": "对不起我暂时无法回复该问题"}
+    state["answer"] = "对不起我暂时无法回复该问题"
+    return state
 
 def file_out(state):
-    return {"answer": "你提供的文档不支持回答"}
+    state["answer"] = "你提供的文档不支持回答"
+    return state
 
 
 def route_node(state):

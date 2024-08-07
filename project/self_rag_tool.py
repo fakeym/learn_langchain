@@ -34,11 +34,11 @@ class GradeAndGenerateTool(object):
         grade_human_prompt = f"""您是问答任务的助理。使用以下检索到的上下文来回答问题。如果你不知道答案，就说你不知道。最多使用三句话，保持答案简洁。\n问题：{question}\n上下文：{text}\n答案："""
         human_prompt = ChatPromptTemplate.from_template(grade_human_prompt)
         grade_human_prompt_end = human_prompt.format_messages(question=question, text=text)
-        result = self.llm_7b.stream(grade_human_prompt_end)
-        content = ''
-        for i in result:
-            content += i.content
-        return content
+        result = self.llm_7b.invoke(grade_human_prompt_end)
+        # content = ''
+        # for i in result:
+        #     content += i.content
+        return result.content
 
     # 判断是否有幻觉
     def hallucinations(self, documents, answer):
