@@ -10,7 +10,7 @@ from langchain_text_splitters import CharacterTextSplitter, RecursiveJsonSplitte
 from pymilvus import MilvusClient
 from tqdm import tqdm
 
-from llm.project.base_model import RouteQuery
+from llm.project.config import base_url
 
 _ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
 
@@ -28,27 +28,25 @@ class ChatDoc(object):
             ".json": self.handle_json,
         }
 
-
         self.txt_splitter = CharacterTextSplitter(chunk_size=240, chunk_overlap=30, length_function=len,
                                                   add_start_index=True)
         self.json_splitter = RecursiveJsonSplitter(max_chunk_size=240)
-        self.embeding = OpenAIEmbeddings(model="text-embedding-3-small")
+        self.embeding = OpenAIEmbeddings(model="bce-embedding-base_v1", base_url=base_url, api_key="xxx")
         self.milvus_client = MilvusClient(host="127.0.0.1", port="19530")
 
-        self.llm = ChatOpenAI(temperature=0, model="qwen2-14b",base_url="http://61.136.221.118:15001/v1")
-        self.struct_llm = self.llm.with_structured_output(RouteQuery)
-
+        self.llm = ChatOpenAI(temperature=0, model="qwen2-instruct", base_url=base_url, api_key="xxx")
 
     def get_knowledge_type(self, filename):
         system_prompt = """
-                                你是一名知识分类专家，主要分别判断以下类别的知识，有且仅有空调，电视机，冰箱这三类知识。识别准确后，返回给用户。返回的映射关系为：电视：TV，冰箱：refrigerator，空调：air_conditioning
-                                """
+            你是一名知识分类专家，主要分别判断以下类别的知识，有且仅有空调，电视机，冰箱这三类知识。识别准确后，返回给用户。
+            识别到空调，返回'air_conditioning'，识别到冰箱，返回'refrigerator'，识别到电视，返回'TV'。
+            """
         grade_messages = [SystemMessage(content=system_prompt)]
         data = self.get_file(filename)[0].page_content
         grade_messages.append(HumanMessage(content=f"{data}"))
-        collection_name = self.struct_llm.invoke(grade_messages)
+        collection_name = self.llm.invoke(grade_messages)
 
-        return collection_name.route
+        return collection_name.content.strip()
 
     def get_file(self, filename):
         file_extension = os.path.splitext(filename)[-1]
@@ -91,7 +89,7 @@ class ChatDoc(object):
     def emb_text(self, text):
         return self.embeding.embed_query(text)
 
-    def vector_storage(self,filename):
+    def vector_storage(self, filename):
         data_name = self.get_knowledge_type(filename)
         data = []
         for idx, text in enumerate(tqdm(self.end_splitter, desc="向量化")):
@@ -101,25 +99,10 @@ class ChatDoc(object):
 
         self.milvus_client.create_collection(
             collection_name=data_name,
-            dimension=1536,
+            dimension=768,
             metric_type="IP",  # Inner product distance
             consistency_level="Strong",  # Strong consistency level
         )
 
         self.milvus_client.insert(collection_name=data_name, data=data)
         return "向量存储成功"
-
-
-# 判断文件知识的类型
-class determine_type(object):
-    def __init__(self):
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
-        self.struct_llm = self.llm.with_structured_output(RouteQuery)
-
-    # 这个是判断知识应该保存在哪个向量数据库中的那张表
-    def vector_tool(self, filename):
-        loader = Docx2txtLoader(filename).load()
-        content = loader[0].page_content
-        res = self.struct_llm.invoke(content)
-        return res
-

@@ -3,12 +3,13 @@ from fastapi import FastAPI, File, UploadFile,Query
 from pydantic import BaseModel, Field
 
 from llm.project.base_tool import ChatDoc
-from llm.project.create_graph_teach import createGraph
+from llm.project.create_graph_teach import createGraph, CreateLLMCustomerService
 
-graph = createGraph()
 
 app = FastAPI()
 
+
+chat_rag =  CreateLLMCustomerService()
 
 class questionInput(BaseModel):
     question: str = Field(..., description="问题")
@@ -17,7 +18,6 @@ class questionInput(BaseModel):
 
 @app.post("/chat_file")
 async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
-    graph_run = graph.create_graph()
     if file:
         contents = await file.read()
         file_name = file.filename
@@ -27,8 +27,8 @@ async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
     else:
         data = {"question": question,"filename":None}
 
-    res = graph_run.invoke(data)
-    return res["answer"]
+    res = chat_rag.chat(**data)
+    return res
 
 
 @app.post("/vector")
@@ -46,4 +46,4 @@ async def vector(file:UploadFile=File(None)):
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app,host='0.0.0.0',port=8000)
+    uvicorn.run(app,host='0.0.0.0',port=5001)
