@@ -12,13 +12,16 @@ from langchain_core.messages import HumanMessage, BaseMessage
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
-from learn_langgraph.constants import END
-from learn_langgraph.graph import StateGraph
+from langgraph.constants import END
+from langgraph.graph import StateGraph
 from pydantic.v1 import BaseModel, Field
+from dotenv import load_dotenv
 
-os.environ["OPENAI_API_KEY"] = "sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph"
-os.environ["OPENAI_BASE_URL"] = "https://api.fe8.cn/v1"
-llm = ChatOpenAI(temperature=0, model="gpt-4o")
+
+_ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
+
+llm_4o = ChatOpenAI(temperature=0, model="gpt-4o")
+llm_3 = ChatOpenAI(temperature=0, model="gpt-3.5-turbo")
 
 class searchAroundInput(BaseModel):
     keyword: str = Field(..., description="搜索关键词")
@@ -39,10 +42,10 @@ class searchAround(BaseTool):
         }
         print("同步调用获取地点周边的方法")
         res = requests.get(url=around_url, params=params)
-        # prompt = "请帮我整理以下内容中的名称，地址和距离，并按照地址与名称对应输出，且告诉距离多少米，内容:{}".format(
-        #     res.json())
-        # result = llm.invoke(prompt)
-        return res.text
+        prompt = "请帮我整理以下内容中的名称，地址和距离，并按照地址与名称对应输出，且告诉距离多少米，内容:{}".format(
+            res.json())
+        result = llm_3.invoke(prompt)
+        return result.content
 
     async def _arun(self, keyword, location):
         async with aiohttp.ClientSession() as session:
@@ -91,6 +94,30 @@ class getLocation(BaseTool):
 
 
 
+class calculatorInput(BaseModel):
+    x : str = Field(..., description="第一个数字")
+    y : str = Field(..., description="第二个数字")
+
+
+class calculator(BaseTool):
+    args_schema: Type[BaseModel] = calculatorInput
+    description = "你是一个高德的输入提示的智能工具，通过用户的关键词提示用户相关的地点"
+    name = "calculator"
+
+
+    def _run(self,keyword):
+        around_url = "https://restapi.amap.com/v3/assistant/inputtips"
+        params = {
+            "key": "df8ff851968143fb413203f195fcd7d7",
+            "keywords": keyword,
+        }
+        print("调用输入提示")
+        res = requests.get(url=around_url, params=params)
+        return res
+
+
+
+
 
 def create_agent(llm: ChatOpenAI, tools: list, system_prompt: str):
     prompt = ChatPromptTemplate.from_messages(
@@ -115,7 +142,7 @@ def agent_node(state, agent, name):
     }
 
 
-members = ["search_around", "get_location"]
+members = ["search_around", "calculator"]
 
 system_prompt = f"""
             你是一名任务管理者，负责管理任务的调度。下面都是你的工作者{members},给定以下请求：与工人一起响应以采取下一步行动，
@@ -151,13 +178,17 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 ).partial(options=str(options), members=",".join(members))
 
-supervisor_chain = prompt | llm.bind_functions(functions=[function_def], function_call="route") |JsonOutputFunctionsParser()
-search_round_agent = create_agent(llm=llm, tools=[searchAround()],
-                                  system_prompt="你是一个搜索周边信息的助手，你需要根据用户的关键词和地点的经纬度，搜索周边的信息，并返回给用户。")
+supervisor_chain = prompt | llm_4o.bind_functions(functions=[function_def], function_call="route") |JsonOutputFunctionsParser()
+
+
+
+
+search_round_agent = create_agent(llm=llm_4o, tools=[searchAround(),getLocation()],
+                                  system_prompt="你是一位地图通，你能够根据用户给出地点去获取到地点周边的地点信息，并返回给用户。你不会为用户提供加法计算的能力")
 search_around_node = functools.partial(agent_node, agent=search_round_agent, name="search_around")
-get_location_agent = create_agent(llm=llm, tools=[getLocation()],
-                                  system_prompt="你是一个获取地点的经纬度的助手，你需要根据用户的关键词，获取地点的经纬度，并返回给用户。")
-get_location_node = functools.partial(agent_node, agent=get_location_agent, name="get_location")
+get_location_agent = create_agent(llm=llm_3, tools=[calculator()],
+                                  system_prompt="你是一个高德的输入提示的智能工具，通过用户的关键词提示用户相关的地点")
+calculator = functools.partial(agent_node, agent=get_location_agent, name="calculator")
 
 
 class AgentState(TypedDict):
@@ -165,8 +196,10 @@ class AgentState(TypedDict):
     next: str
 
 
+
+
 work_flow = StateGraph(AgentState)
-work_flow.add_node("get_location", get_location_node)
+work_flow.add_node("calculator", calculator)
 work_flow.add_node("search_around", search_around_node)
 work_flow.add_node("supervisor", supervisor_chain)
 for function_name in members:
@@ -175,8 +208,10 @@ for function_name in members:
 conditional_map = {
     "FINISH": END,
     "search_around": "search_around",
-    "get_location": "get_location",
+    "calculator": "calculator",
 }
+
+
 
 
 
@@ -189,9 +224,9 @@ graph = work_flow.compile()
 
 
 
-res = graph.stream({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]})
-for i in res:
-    print(i)
+res = graph.invoke({"messages": [HumanMessage(content="请告诉我成都环球中心的周边有什么餐饮店和请告诉我仙林相关的地点")]})
+print(res)
+
 
 
 # res = graph.invoke({"messages": [HumanMessage(content="请告诉我四川大学望江校区的周边有什么餐饮店")]})
