@@ -48,7 +48,6 @@ def grade_documents(state):
                    documents}
         for future in concurrent.futures.as_completed(futures):
             result = future.result()
-            print(result)
             if result[0] == "yes":
                 filtter_documents.append(documents[result[1]])
     if grade_count:
@@ -69,8 +68,6 @@ def generation(state):
         hallucination_count = 1
     document = "\n".join(documents).replace("{", "").replace("}", "")
     answer = tools.generate(question, document)
-    if hallucination_count > 3:
-        return {"question": question, "answer": answer, "hallucination_count": hallucination_count}
     return {"question": question, "answer": answer, "hallucination_count": hallucination_count}
 
 
@@ -86,12 +83,13 @@ def grade_generation(state):
     grade_count = state["grade_count"]
     if grade_count > 3:
         return "end_answer"
-    if documents:
-        return "generation"
     else:
-        if filename:
-            return "file_out"
-        return "rewrite_question"
+        if documents:
+            return "generation"
+        else:
+            if filename:
+                return "file_out"
+            return "rewrite_question"
 
 
 def hallucinations_generate(state):
@@ -120,12 +118,12 @@ def vector_storage(state):
 
 
 def end_answer(state):
-    state["answer"] = "对不起我暂时无法回复该问题"
-    return state
+    answer  = "对不起我暂时无法回复该问题"
+    return {"answer":answer}
 
 def file_out(state):
-    state["answer"] = "你提供的文档不支持回答"
-    return state
+    answer = "你提供的文档不支持回答"
+    return {"answer":answer}
 
 
 def route_node(state):

@@ -66,7 +66,7 @@ class createGraph(BaseTool):
         workflow.add_edge("rewrite_question", "retrieve")
 
         graph = workflow.compile()
-        result = graph.invoke({"question": question, "filename": filename})
+        result = graph.invoke({"question": question, "filename": filename,"grade_count":0,"hallucination_count":0})
 
         return result["answer"]
 
@@ -100,7 +100,7 @@ class createGraph(BaseTool):
         workflow.add_edge("rewrite_question", "retrieve")
 
         graph = workflow.compile()
-        result = graph.invoke({"question": question, "filename": filename})
+        result = graph.invoke({"question": question, "filename": filename,"grade_count":0,"hallucination_count":0})
         return result["answer"]
 
 
@@ -110,11 +110,12 @@ class CreateLLMCustomerService(object):
 
 
     def __init__(self):
-        self.llm = ChatOpenAI(temperature=0, model="qwen2-instruct",base_url=base_url, api_key="xxx")
+        self.llm = ChatOpenAI(model="qwen2-instruct",base_url=base_url, api_key="xxx")
         # self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "你是一位关于家电行业的智能客服机器人，你只能回答冰箱，空调，电视的问题，请根据用户的问题给出回答，只要用户问了冰箱，空调，电视机的相关问题，你都必须使用工具进行回答，不能自己编造信息进行回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"),
+            ("system", """你是一位家电行业的智能客服机器人，你只能回答关于家电行业的问题，与家电行业不相关的问题一律不回答，提示用户我是一位家电行业的客服，不能回答其余行业的问题。
+                          整个过程你都只能去使用已有的工具调用进行回答，不能基于自己的知识进行回答，也请不要捏造事实。全程请基于工具返回的信息回答。"""),
             # ("system", "你是一位数学家，你会计算两个数的和与两个数的乘积，并且能把结果返回个给用户"),
             MessagesPlaceholder(variable_name="messages"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
