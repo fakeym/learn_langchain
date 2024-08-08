@@ -14,7 +14,6 @@ vector_tool = VectorStorageObject()
 def get_knowledge_type(state):
     question = state["question"]
     filename = state["filename"]
-    print(state)
     system_prompt = """
                 你是一名知识分类专家，主要分别判断以下类别的知识，有且仅有空调，电视机，冰箱这三类知识。识别准确后，返回给用户。
                 识别到空调，返回'air_conditioning'，识别到冰箱，返回'refrigerator'，识别到电视，返回'TV'。
@@ -42,6 +41,7 @@ def grade_documents(state):
     question = state["question"]
     documents = state["documents"]
     filename = state["filename"]
+    grade_count = state["grade_count"]
     filtter_documents = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(tools.grade, question, document, documents.index(document)) for document in
@@ -51,8 +51,12 @@ def grade_documents(state):
             print(result)
             if result[0] == "yes":
                 filtter_documents.append(documents[result[1]])
+    if grade_count:
+        grade_count += 1
+    else:
+        grade_count = 1
 
-    return {"question": question, "documents": filtter_documents, "filename": filename}
+    return {"question": question, "documents": filtter_documents, "filename": filename, "grade_count": grade_count}
 
 
 def generation(state):
@@ -79,6 +83,9 @@ def rewrite_question(state):
 def grade_generation(state):
     documents = state["documents"]
     filename = state["filename"]
+    grade_count = state["grade_count"]
+    if grade_count > 3:
+        return "end_answer"
     if documents:
         return "generation"
     else:

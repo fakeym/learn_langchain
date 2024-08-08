@@ -2,7 +2,7 @@ import json
 import os
 
 from dotenv import load_dotenv
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredMarkdownLoader, CSVLoader
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredMarkdownLoader, CSVLoader,TextLoader
 from langchain_text_splitters import CharacterTextSplitter, RecursiveJsonSplitter
 
 _ = load_dotenv("/Users/zhulang/work/llm/self_rag/.env")
@@ -13,7 +13,7 @@ class VectorStorageObject(object):
     def __init__(self):
         self.loader = {
             ".pdf": PyPDFLoader,
-            ".txt": Docx2txtLoader,
+            ".txt": TextLoader,
             ".docx": Docx2txtLoader,
             ".md": UnstructuredMarkdownLoader,
             ".csv": CSVLoader,
@@ -62,3 +62,4 @@ class VectorStorageObject(object):
 
         else:
             raise "文件格式不支持"
+
