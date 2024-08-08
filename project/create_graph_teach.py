@@ -70,38 +70,6 @@ class createGraph(BaseTool):
         return result["answer"]
 
 
-    async def _arun(self,question,filename):
-        workflow = StateGraph(CreateLanggraphState)
-
-        workflow.add_node("get_knowledge_type", get_knowledge_type)
-        workflow.add_node("vector_storage", vector_storage)
-        workflow.add_node("retrieve", retrieve)
-        workflow.add_node("file_out", file_out)
-        workflow.add_node("grade_documents", grade_documents)
-        workflow.add_node("generation", generation)
-        workflow.add_node("rewrite_question", rewrite_question)
-        workflow.add_node("end_answer", end_answer)
-
-        workflow.add_conditional_edges(START, route_node,
-                                       {"vector_storage": "vector_storage", "get_knowledge_type": "get_knowledge_type"})
-        workflow.add_edge("vector_storage", "grade_documents")
-
-        workflow.add_edge("get_knowledge_type", "retrieve")
-        workflow.add_edge("retrieve", "grade_documents")
-        workflow.add_conditional_edges("grade_documents", grade_generation,
-                                       {"generation": "generation", "rewrite_question": "rewrite_question",
-                                        "file_out": "file_out"})
-        workflow.add_conditional_edges("generation", hallucinations_generate,
-                                       {"generation": "generation", "rewrite_question": "rewrite_question","end_answer":"end_answer",
-                                        "useful": END})
-        workflow.add_edge("file_out", END)
-
-        workflow.add_edge("rewrite_question", "retrieve")
-
-        graph = workflow.compile()
-        result = graph.invoke({"question": question, "filename": filename})
-
-        return result["answer"]
 
 
 
@@ -110,7 +78,7 @@ class CreateLLMCustomerService(object):
 
 
     def __init__(self):
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        self.llm = ChatOpenAI(temperature=0, model="qwen2-instruct",base_url=base_url, api_key="xxx")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", "你是一位关于家电行业的智能客服机器人，你可以回答冰箱，空调，电视的问题，请根据用户的问题给出回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"),
@@ -119,7 +87,7 @@ class CreateLLMCustomerService(object):
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ])
         self.agent = create_openai_tools_agent(llm=self.llm,tools=[createGraph()],prompt=prompt)
-        self.excutor_agent = AgentExecutor(agent=self.agent, tools=[createGraph()], verbose=True)
+        self.excutor_agent = AgentExecutor(agent=self.agent, tools=[createGraph()])
         self.messages = []
 
 
