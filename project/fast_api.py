@@ -25,7 +25,7 @@ async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
             f.write(contents)
         data = {"question": question, "filename": file_name}
     else:
-        data = {"question": question,"filename":None}
+        data = {"question": question}
 
     res = chat_rag.chat(**data)
     return res

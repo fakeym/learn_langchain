@@ -28,7 +28,7 @@ class CreateLanggraphState(TypedDict):
 
 class CreateLanggraphInput(BaseModel):
     question: str = Field(..., description="问题")
-    filename : str = Field(None, description="文件名")
+    filename : str = Field(None, description="完整的文件名，包含文件格式和文件名称，若没有则为None")
 
 
 
@@ -70,6 +70,40 @@ class createGraph(BaseTool):
         return result["answer"]
 
 
+    # async def _arun(self,question,filename):
+    #     workflow = StateGraph(CreateLanggraphState)
+    #
+    #     workflow.add_node("get_knowledge_type", get_knowledge_type)
+    #     workflow.add_node("vector_storage", vector_storage)
+    #     workflow.add_node("retrieve", retrieve)
+    #     workflow.add_node("file_out", file_out)
+    #     workflow.add_node("grade_documents", grade_documents)
+    #     workflow.add_node("generation", generation)
+    #     workflow.add_node("rewrite_question", rewrite_question)
+    #     workflow.add_node("end_answer", end_answer)
+    #
+    #     workflow.add_conditional_edges(START, route_node,
+    #                                    {"vector_storage": "vector_storage", "get_knowledge_type": "get_knowledge_type"})
+    #     workflow.add_edge("vector_storage", "grade_documents")
+    #
+    #     workflow.add_edge("get_knowledge_type", "retrieve")
+    #     workflow.add_edge("retrieve", "grade_documents")
+    #     workflow.add_conditional_edges("grade_documents", grade_generation,
+    #                                    {"generation": "generation", "rewrite_question": "rewrite_question",
+    #                                     "file_out": "file_out"})
+    #     workflow.add_conditional_edges("generation", hallucinations_generate,
+    #                                    {"generation": "generation", "rewrite_question": "rewrite_question","end_answer":"end_answer",
+    #                                     "useful": END})
+    #     workflow.add_edge("file_out", END)
+    #
+    #     workflow.add_edge("rewrite_question", "retrieve")
+    #
+    #     graph = workflow.compile()
+    #     result = graph.stream({"question": question, "filename": filename})
+    #     for i in result:
+    #         print(i)
+
+        # return result["answer"]
 
 
 
@@ -79,20 +113,25 @@ class CreateLLMCustomerService(object):
 
     def __init__(self):
         self.llm = ChatOpenAI(temperature=0, model="qwen2-instruct",base_url=base_url, api_key="xxx")
+        # self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "你是一位关于家电行业的智能客服机器人，你可以回答冰箱，空调，电视的问题，请根据用户的问题给出回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"),
+            ("system", "你是一位关于家电行业的智能客服机器人，你只能回答冰箱，空调，电视的问题，请根据用户的问题给出回答，只要用户问了冰箱，空调，电视机的相关问题，你都必须走工具调用进行回答，不能自己编造信息进行回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"),
             # ("system", "你是一位数学家，你会计算两个数的和与两个数的乘积，并且能把结果返回个给用户"),
             MessagesPlaceholder(variable_name="messages"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ])
         self.agent = create_openai_tools_agent(llm=self.llm,tools=[createGraph()],prompt=prompt)
-        self.excutor_agent = AgentExecutor(agent=self.agent, tools=[createGraph()])
+        self.excutor_agent = AgentExecutor(agent=self.agent, tools=[createGraph()],verbose=True)
         self.messages = []
 
 
-    def chat(self, question, filename):
-        self.messages.append(HumanMessage(content=f"问题：{question},文件：{filename}"))
+    def chat(self, question, filename=None):
+        if filename:
+            content = f"问题：{question},文件：{filename}"
+        else:
+            content = f"问题：{question}"
+        self.messages.append(HumanMessage(content=content))
         res = self.excutor_agent.invoke({"messages": self.messages})
         self.messages.append(AIMessage(content=res["output"]))
         return res["output"]
