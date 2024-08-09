@@ -13,7 +13,6 @@ chat_rag =  CreateLLMCustomerService()
 
 class questionInput(BaseModel):
     question: str = Field(..., description="问题")
-#     file :UploadFile=File(description="文件")
 
 
 @app.post("/chat_file")
@@ -23,9 +22,9 @@ async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
         file_name = file.filename
         with open(file_name, "wb") as f:
             f.write(contents)
-        data = {"question": question + "你不能使用已有的知识进行回答，必须调用工具才能进行回答", "filename": file_name}
+        data = {"question": question, "filename": file_name}
     else:
-        data = {"question": question+"你不能使用已有的知识进行回答，必须调用工具才能进行回答"}
+        data = {"question": question}
 
     res = chat_rag.chat(**data)
     return res

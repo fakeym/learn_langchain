@@ -110,8 +110,8 @@ class CreateLLMCustomerService(object):
 
 
     def __init__(self):
-        self.llm = ChatOpenAI(model="qwen2-instruct",base_url=base_url, api_key="xxx")
-        # self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        # self.llm = ChatOpenAI(model="qwen2-instruct",base_url=base_url, api_key="xxx")
+        self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", f"""
