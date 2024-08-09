@@ -16,7 +16,7 @@ def get_knowledge_type(state):
     filename = state["filename"]
     system_prompt = """
                 你是一名知识分类专家，主要分别判断以下类别的知识，有且仅有空调，电视机，冰箱这三类知识。识别准确后，返回给用户。
-                识别到空调，返回'air_conditioning'，识别到冰箱，返回'refrigerator'，识别到电视，返回'TV'。
+                识别到空调，返回'air_conditioning'，识别到冰箱，返回'refrigerator'，识别到电视，返回'TV。
                 """
     grade_messages = [SystemMessage(content=system_prompt)]
     grade_messages.append(HumanMessage(content=f"{question}"))
@@ -29,7 +29,10 @@ def retrieve(state):
     question = state["question"]
     collection_name = state["collection_name"]
     filename = state["filename"]
-    documents = tools.search_vector(question, collection_name)
+    if filename:
+        documents = vector_tool.split_text(filename)
+    else:
+        documents = tools.search_vector(question, collection_name)
     result_documents = []
     for document in documents[0]:
         result_documents.append(document["entity"]["text"])
@@ -94,7 +97,7 @@ def grade_generation(state):
 
 def hallucinations_generate(state):
     documents = state["documents"]
-    answer = state["answer"] + "冰箱的发展历程有幻觉"
+    answer = state["answer"]
     question = state["question"]
     hallucination_count = state["hallucination_count"]
     hallucinations_score = tools.hallucinations(documents, answer)

@@ -3,7 +3,7 @@ from fastapi import FastAPI, File, UploadFile,Query
 from pydantic import BaseModel, Field
 
 from llm.project.base_tool import ChatDoc
-from llm.project.create_graph_teach import createGraph, CreateLLMCustomerService
+from llm.project.create_graph_teach import CreateLLMCustomerService
 
 
 app = FastAPI()
@@ -23,9 +23,9 @@ async def chat_file(question:str=Query(None),file:UploadFile=File(None)):
         file_name = file.filename
         with open(file_name, "wb") as f:
             f.write(contents)
-        data = {"question": question + "请使用工具进行回答", "filename": file_name}
+        data = {"question": question + "你不能使用已有的知识进行回答，必须调用工具才能进行回答", "filename": file_name}
     else:
-        data = {"question": question+"请使用工具进行回答"}
+        data = {"question": question+"你不能使用已有的知识进行回答，必须调用工具才能进行回答"}
 
     res = chat_rag.chat(**data)
     return res

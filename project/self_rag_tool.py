@@ -14,7 +14,6 @@ class GradeAndGenerateTool(object):
     def __init__(self):
         self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
         self.llm_7b = ChatOpenAI(temperature=0, model="qwen2-instruct", base_url=base_url, api_key="xxx")
-        # self.embeding = OpenAIEmbeddings(model="text-embedding-3-small")
         self.embeding = OpenAIEmbeddings(model="bce-embedding-base_v1",base_url=base_url,api_key="xxx")
 
     # 评分
@@ -35,9 +34,6 @@ class GradeAndGenerateTool(object):
         human_prompt = ChatPromptTemplate.from_template(grade_human_prompt)
         grade_human_prompt_end = human_prompt.format_messages(question=question, text=text)
         result = self.llm_7b.invoke(grade_human_prompt_end)
-        # content = ''
-        # for i in result:
-        #     content += i.content
         return result.content
 
     # 判断是否有幻觉

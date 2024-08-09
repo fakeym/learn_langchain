@@ -29,15 +29,15 @@ class CreateLanggraphState(TypedDict):
 
 class CreateLanggraphInput(BaseModel):
     question: str = Field(..., description="问题")
-    filename : str = Field(None, description="完整的文件名，包含文件格式和文件名称，若没有则为None")
+    filename : str = Field(None, description="完整的文件名，包含文件格式和文件名称")
 
 
 
 class createGraph(BaseTool):
     args_schema: Type[BaseModel] = CreateLanggraphInput
-    description = "这是一个有关于家电领域的智能回答工具，只支持回答电视机，冰箱，空调的问答，请根据用户的问题给出回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"
+    description = "这是一个有关于家电领域的智能回答工具，请根据用户的问题给出回答，如果用户给出的问题不属于上述三个领域，则给出提示，并重新提问。"
     name = "create_graph"
-    def _run(self,question,filename):
+    def _run(self,question,filename=None):
         workflow = StateGraph(CreateLanggraphState)
 
         workflow.add_node("get_knowledge_type", get_knowledge_type)
@@ -71,7 +71,7 @@ class createGraph(BaseTool):
         return result["answer"]
 
 
-    async def _arun(self,question,filename):
+    async def _arun(self,question,filename=None):
         workflow = StateGraph(CreateLanggraphState)
 
         workflow.add_node("get_knowledge_type", get_knowledge_type)
@@ -114,9 +114,15 @@ class CreateLLMCustomerService(object):
         # self.llm = ChatOpenAI(temperature=0, model="gpt-4o")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """你是一位家电行业的智能客服机器人，你只能回答关于家电行业的问题，与家电行业不相关的问题一律不回答，提示用户我是一位家电行业的客服，不能回答其余行业的问题。
-                          整个过程你都只能去使用已有的工具调用进行回答，不能基于自己的知识进行回答，也请不要捏造事实。全程请基于工具返回的信息回答。"""),
-            # ("system", "你是一位数学家，你会计算两个数的和与两个数的乘积，并且能把结果返回个给用户"),
+            ("system", f"""
+                          **角色**
+                          你是一位家电行业的智能客服，
+                          **能力**
+                          1、你需要根据用户的指令去判断应该调用工具还是根据上下文进行回答。
+                          2、如果用户问的问题与家电行业不相关，则提示用户你是一位关于家电行业的智能客服，暂时不支持回答其他行业的问题。
+                          3、全程请用中文回答
+                          4、你只需要基于原文进行回答，不需要在原文的基础上进行解释或者延伸。请简要的回答用户的问题
+            """),
             MessagesPlaceholder(variable_name="messages"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ])
