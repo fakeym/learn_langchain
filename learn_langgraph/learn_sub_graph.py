@@ -5,13 +5,14 @@ from typing import TypedDict, List, Dict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
-from learn_langgraph.constants import END
-from learn_langgraph.graph import StateGraph
+# from learn_langgraph.constants import END
+# from learn_langgraph.graph import StateGraph
+from langgraph.graph import END, StateGraph, MessagesState
 
 from rag_tool_graph import ChatDoc
 
 # _ = load_dotenv()
-
+# api_key =
 
 """
 下面是一个具有rag功能的子图
@@ -33,6 +34,7 @@ work_flow_rag = StateGraph(ragState)
 work_flow_rag.add_node("rag_tool", rag_tool)
 work_flow_rag.set_entry_point("rag_tool")
 work_flow_rag.set_finish_point("rag_tool")
+# print(work_flow_rag.compile().invoke({'result':[HumanMessage(content='请告诉我可乐多少钱一瓶')]}))
 
 """
 下面是一个具有query功能的子图
@@ -71,12 +73,11 @@ class graphState(TypedDict):
 class runGraph(object):
 
     def __init__(self):
-        self.system_template = PromptTemplate.from_file("prompt.txt")
-        self.messages = [SystemMessage(content=self.system_template.template)]
-        self.llm = ChatOpenAI(temperature=0, model="gpt-4o",
-                              api_key="sk-nA4XFQzD7IZc8fVTcLDFqH1ds9ySyS39hpl46eOxiTltIfph",
-                              base_url="https://api.fe8.cn/v1")
-        self.human_prompt = PromptTemplate.from_file("human_prompt.txt")
+        self.system_template = ''
+        self.messages = [SystemMessage(content=self.system_template)]
+        self.llm = ChatOpenAI(temperature=0, model="yi-large-fc",openai_api_key="477030cf46cb452a8daaecd2596345f2",
+                         openai_api_base="https://api.lingyiwanwu.com/v1")
+        self.human_prompt = PromptTemplate.from_file("learn_langgraph/human_prompt.txt")
         print(self.human_prompt)
 
     def call_model(self, state):

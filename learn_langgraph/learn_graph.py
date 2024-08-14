@@ -69,8 +69,6 @@ model = ChatOpenAI(temperature=0,model="yi-large-fc",openai_api_key="477030cf46c
                          openai_api_base="https://api.lingyiwanwu.com/v1")
 
 llm = model.bind_tools(tools)
-
-
 def call_model(state: MessagesState) -> MessagesState:
     """
     这是调用大模型的方法
@@ -80,8 +78,6 @@ def call_model(state: MessagesState) -> MessagesState:
     messages = state["messages"]
     response = llm.invoke(messages)
     return {"messages" : [response]}
-
-
 def should_continue(state: MessagesState):
     """
     判断是否需要继续执行
@@ -94,12 +90,10 @@ def should_continue(state: MessagesState):
     else:
         return END
 
-
 work_flow = StateGraph(MessagesState)
 
 work_flow.add_node("tools",tool_node)
 work_flow.add_node("model",call_model)
-
 
 work_flow.add_edge("tools","model")
 
@@ -109,11 +103,9 @@ work_flow.set_entry_point("model")
 
 app = work_flow.compile()
 
-messages = [SystemMessage(content="你是一个造车助手，你擅造成，并能够把车和账号绑定"),
+messages = [SystemMessage(content="你是一个造车助手，你擅造车，并能够把车和账号绑定"),
             HumanMessage(content="你好"),
             AIMessage(content="你好，请问有什么可以帮你")]
-
-
 while True:
     human = input("请输入你的问题：")
     messages.append(HumanMessage(content=human))
